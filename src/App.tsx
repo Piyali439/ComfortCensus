@@ -7,6 +7,7 @@ import { Results } from './components/Results';
 import { supabase } from './lib/supabase';
 import { getSessionId, hasVisitedBefore } from './lib/session';
 import type { MoodState, ComfortType } from './lib/database.types';
+import { getRecommendation, Recommendation } from './data/recommendations';
 
 type Step = 'welcome' | 'mood' | 'comfort' | 'results';
 
@@ -14,6 +15,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
   const [selectedMood, setSelectedMood] = useState<MoodState | null>(null);
   const [selectedComfort, setSelectedComfort] = useState<ComfortType | null>(null);
+  const [finalPrescription, setFinalPrescription] = useState<Recommendation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isReturningUser = hasVisitedBefore();
 
@@ -32,6 +34,10 @@ function App() {
   const handleSubmit = async () => {
     if (!selectedMood || !selectedComfort) return;
 
+    const prescription = getRecommendation(selectedMood, selectedComfort);
+    
+    setFinalPrescription(prescription);
+
     setIsSubmitting(true);
     try {
       const sessionId = getSessionId();
@@ -47,6 +53,7 @@ function App() {
       setCurrentStep('results');
     } catch (error) {
       console.error('Error submitting check-in:', error);
+      setFinalPrescription(null);
       alert('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -56,6 +63,7 @@ function App() {
   const handleStartOver = () => {
     setSelectedMood(null);
     setSelectedComfort(null);
+    setFinalPrescription(null);
     setCurrentStep('welcome');
   };
 
@@ -117,10 +125,11 @@ function App() {
             </div>
           )}
 
-          {currentStep === 'results' && selectedMood && selectedComfort && (
+          {currentStep === 'results' && finalPrescription && selectedMood && selectedComfort && (
             <Results
               mood={selectedMood}
               comfort={selectedComfort}
+              recommendation={finalPrescription}
               onStartOver={handleStartOver}
             />
           )}
