@@ -1,42 +1,32 @@
 // server/api-server.js
 
 import express from 'express';
-import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
-import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 
-// Load environment variables from the root .env file
-dotenv.config(); 
-
-// Initialize Express App and Port
+// Initialize Express App
 const app = express();
-const API_PORT = 3001; 
 
 // --- Configuration ---
-// Allow client (e.g., http://localhost:5173) to call this server
-app.use(cors({
-    origin: 'http://localhost:5173', // Adjust to your Vite dev port if different
-    credentials: true,
-}));
-
-// Parse application/json requests
-app.use(bodyParser.json());
+// Use Express's built-in parser. Vercel automatically parses JSON bodies sent to serverless functions.
+app.use(express.json()); 
+// NOTE: Vercel handles CORS and environment variables securely, so we remove dotenv.config and cors() usage.
 
 // --- Gemini API Initialization ---
+// Vercel securely injects the variable into process.env.
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (!GEMINI_API_KEY) {
-    console.error("FATAL ERROR: GEMINI_API_KEY is not set in .env.");
-    process.exit(1);
+    // This will error out immediately if the key isn't set in the Vercel dashboard.
+    console.error("FATAL ERROR: GEMINI_API_KEY is not set.");
 }
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 
-// --- API Endpoint: /api/generate-prescription ---
+// --- API Endpoint: /api/generate-prescription (ROUTE Definition) ---
+// This route will be accessible via the path defined in vercel.json (e.g., /api/data/generate-prescription)
 app.post('/api/generate-prescription', async (req, res) => {
-    // req.body contains the JSON data sent from the client
+    // req.body is automatically available thanks to Express and Vercel's helpers.
     const { mood, comfort } = req.body;
 
     if (!mood || !comfort) {
@@ -46,7 +36,6 @@ app.post('/api/generate-prescription', async (req, res) => {
     try {
         const systemInstruction = `You are the Teddy Bear Sanctuary's Chief Comfort Officer. Your goal is to generate a single, actionable comfort prescription in JSON format. The prescription must be based on the user's mood (${mood}) and comfort need (${comfort}).`;
 
-        // The prompt is the same as your serverless function
         const prompt = `Generate a cozy, unique prescription. Include three distinct suggestions related to the user's comfort type. Return ONLY the JSON object.`;
 
         const response = await ai.models.generateContent({
@@ -55,7 +44,6 @@ app.post('/api/generate-prescription', async (req, res) => {
             config: {
                 systemInstruction: systemInstruction,
                 responseMimeType: "application/json",
-                // Define the expected output structure (same as before)
                 responseSchema: {
                     type: "object",
                     properties: {
@@ -71,7 +59,6 @@ app.post('/api/generate-prescription', async (req, res) => {
         });
 
         // Send the generated JSON content back to the client
-        // We use JSON.parse because the response text is a JSON string
         res.status(200).json(JSON.parse(response.text));
 
     } catch (error) {
@@ -80,7 +67,6 @@ app.post('/api/generate-prescription', async (req, res) => {
     }
 });
 
-// --- Server Startup ---
-app.listen(API_PORT, () => {
-    console.log(`🐻 Express API Server running securely on http://localhost:${API_PORT}`);
-});
+// --- FINAL EXPORT: CRITICAL STEP ---
+// This exports the Express app instance, which Vercel wraps into a Serverless Function.
+export default app;
