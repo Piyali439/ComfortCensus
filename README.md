@@ -1,6 +1,4 @@
----
-
-# 🌟 ComfortCensus
+## 🌟 ComfortCensus
 
 Welcome to **ComfortCensus** — your cozy little corner of the internet where comfort meets data! 🏡💖
 
