@@ -1,14 +1,29 @@
 {
   "builds": [
     {
-      "src": "server/api-server.js", 
+      "src": "api/api-server.js", 
       "use": "@vercel/node"
+    },
+    {
+      "src": "src/**/*", 
+      "use": "@vercel/react"
+    }
+
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/$1"
     }
   ],
   "rewrites": [
     {
-      "source": "/api/data/(.*)",
-      "destination": "/server/api-server.js"
+      "source": "/api/(.*)",
+      "destination": "/api/api-server.js"
     },
     
     {
